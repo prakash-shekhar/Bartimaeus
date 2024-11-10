@@ -2,100 +2,124 @@ from transformers import pipeline
 import cv2
 import numpy as np
 from PIL import Image
-import time
-import numpy as np
-import cv2
-from ultralytics import YOLO
+import torch
+from transformers import CLIPSegProcessor, CLIPSegForImageSegmentation
+from utils import *
+depth_colored = None
 
-device = "cpu"
-pipe = pipeline(task="depth-estimation", model="depth-anything/Depth-Anything-V2-Small-hf", device=device)
 
-# Load the YOLOv8 model (You can replace 'yolov8n' with 'yolov8s', 'yolov8m', etc., depending on your performance needs)
-model = YOLO('yolov8n.pt')  # 'n' is for nano, a smaller, faster model
+AREA_THRESHOLD = 2.5
+DEPTH_THRESHOLD = 30
 
-cap = cv2.VideoCapture(0)
+DEPTH_ADJUST_COUNTER = 1
 
+device = "mps"
+depth_pipe = pipeline(task="depth-estimation", model="depth-anything/Depth-Anything-V2-Small-hf", device=device)
+seg_processor = CLIPSegProcessor.from_pretrained("CIDAS/clipseg-rd64-refined")
+seg_model = CLIPSegForImageSegmentation.from_pretrained("CIDAS/clipseg-rd64-refined").to(device)
+
+cap = cv2.VideoCapture(1)
 if not cap.isOpened():
     print("Error: Could not open video.")
     exit()
 
-i = 0
+target_obj = "chair"
+obstacle_obj = "backpack"
 
+color_map = {
+    "backpack": (255, 0, 0),
+    "chair": (0, 255, 0),
+    "bottle": (0, 0, 255),
+    "cup": (0, 255, 255)
+}
+initial_depth = {}
+initial_area = {}
 
-iteration = 0
 while True:
-    tup_arr = []
-    start_time = time.time()
+    data = []
     ret, frame = cap.read()
-    # frame = cv2.flip(frame, 1)
     if not ret:
         print("Error: Could not read frame.")
         break
 
-    # Resize frame to half its original resolution
-    # frame_small = cv2.resize(frame, (frame.shape[1] // 2, frame.shape[0] // 2))
+    if DEPTH_ADJUST_COUNTER < 1:
+        speak_mac(f"The {target_obj} has been found!")
+        DEPTH_ADJUST_COUNTER = 1
 
-    frame_small = cv2.resize(frame, (640//2, 480//2))
+    frame = cv2.resize(frame, (640, 480))
+    combined_mask = np.zeros_like(frame)
 
-    # Convert the resized frame to RGB format for the pipeline
-    image = Image.fromarray(cv2.cvtColor(frame_small, cv2.COLOR_BGR2RGB))
-    depth = pipe(image)["depth"]
-    depth_array = np.array(depth)
+    target_mask = get_object_mask(frame, prompt=target_obj)
+    target_contours, _ = cv2.findContours(target_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    # Normalize depth array between 0 and 1 for true depth calculation
-    min_depth, max_depth = depth_array.min(), depth_array.max()
-    depth_normalized = (depth_array - min_depth) / (max_depth - min_depth)
+    if target_contours:
+        largest_contour = max(target_contours, key=cv2.contourArea)
+        x, y, w, h = cv2.boundingRect(largest_contour)
+        area = cv2.contourArea(largest_contour)
 
-    # Calculate A and B for the true depth formula
-    A = 1 / max_depth
-    B = (1 / min_depth) - A
+        image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+        depth = depth_pipe(image)["depth"]
+        depth_array = np.array(depth)
 
-    # Compute true depth for each pixel
-    true_depth_array = 1 / (A + B * depth_normalized)
+        target_depth_values = depth_array[y:y+h, x:x+w]
+        average_depth = np.mean(target_depth_values)
 
-    # Visualize the depth map
-    depth_display = cv2.normalize(depth_array, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-    depth_colored = cv2.applyColorMap(depth_display, cv2.COLORMAP_MAGMA)
+        if target_obj not in initial_depth:
+            initial_depth[target_obj] = average_depth
+            initial_area[target_obj] = area
+        else:
+            if area >= AREA_THRESHOLD * initial_area[target_obj] and average_depth >= initial_depth[target_obj] + DEPTH_THRESHOLD:
+                speak_mac(f"You are now at the {target_obj}.")
+                print(f"You are now at the {target_obj}.")
+                break
 
+        depth_colored = cv2.applyColorMap(cv2.normalize(depth_array, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8), cv2.COLORMAP_MAGMA)
+        box_color = color_map.get(target_obj, (255, 255, 255))
+        cv2.rectangle(depth_colored, (x, y), (x + w, y + h), box_color, 2)
+        cv2.putText(depth_colored, f"{target_obj}: Avg Depth {average_depth:.2f}", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, box_color, 1)
 
-    fps = 1 / (time.time() - start_time)
-    cv2.putText(frame, f"FPS: {fps:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+        target_overlay = np.zeros_like(frame)
+        target_overlay[target_mask == 255] = box_color
+        combined_mask = cv2.addWeighted(combined_mask, 1, target_overlay, 1, 0)
 
-    # Save only the smaller depth image
-    if i < 10:
-        cv2.imwrite(f"depth_photos/0{i}.png", depth_colored)
-        i += 1
+        data.append((target_obj, (x,y), (x+w,y+h), average_depth))
 
-    results = model(frame_small)
-    for result in results[0].boxes:  # Access the first item (image results) and boxes
-        box = result.xyxy[0]  # Get the box coordinates in xyxy format
-        confidence = result.conf[0]  # Confidence of the detection
-        class_id = int(result.cls[0])  # Class ID of the detection
-        label = model.names[class_id]  # Get label name from class ID
+    if obstacle_obj is not None:
+        obstacle_mask = get_object_mask(frame, prompt=obstacle_obj)
+        obstacle_contours, _ = cv2.findContours(obstacle_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        # Draw the bounding box
-        x_top_left, y_top_left, x_bottom_right, y_bottom_right = map(int, box)
-        cv2.rectangle(depth_colored, (x_top_left, y_top_left), (x_bottom_right, y_bottom_right), (0, 255, 0), 2)
+        if obstacle_contours:
+            largest_obstacle_contour = max(obstacle_contours, key=cv2.contourArea)
+            x, y, w, h = cv2.boundingRect(largest_obstacle_contour)
+            obstacle_depth_values = depth_array[y:y+h, x:x+w]
+            obstacle_average_depth = np.mean(obstacle_depth_values)
 
-        # Add label and confidence score
-        label_text = f"{label}: {confidence:.2f}"
-        cv2.putText(depth_colored, label_text, (x_top_left, y_top_left - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
-                    (0, 255, 0), 1)
+            obstacle_color = color_map.get(obstacle_obj, (255, 255, 255))
+            cv2.rectangle(depth_colored, (x, y), (x + w, y + h), obstacle_color, 2)
+            cv2.putText(depth_colored, f"{obstacle_obj}: Avg Depth {obstacle_average_depth:.2f}", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, obstacle_color, 1)
 
-        if(confidence > 0.4):
-            x_top_left, y_top_left, x_bottom_right, y_bottom_right = map(int, box)
-            x_center = (x_top_left + x_bottom_right) // 2
-            y_center = (y_top_left + y_bottom_right) // 2
-            true_depth = depth_array[y_center, x_center]
-            tup_arr.append((iteration, label, x_top_left, y_top_left, x_bottom_right, y_bottom_right, true_depth))
-            # print(x_center, y_center, true_depth)
+            obstacle_overlay = np.zeros_like(frame)
+            obstacle_overlay[obstacle_mask == 255] = obstacle_color
+            combined_mask = cv2.addWeighted(combined_mask, 1, obstacle_overlay, 1, 0)
 
-    # Display the original frame and depth map in their original size
-    # cv2.imshow('Original', frame)
-    cv2.imshow('Depth Map (Color)', depth_colored)
+            data.append((obstacle_obj, (x,y), (x+w,y+h), average_depth))
+
+    if depth_colored is None:
+        if DEPTH_ADJUST_COUNTER==0:
+            speak_mac(f"The {target_obj} does not exist in your surroundings!")
+            break
+        DEPTH_ADJUST_COUNTER-=1
+        speak_mac(f"The {target_obj} cannot be seen. Please rotate!")
+
+    if depth_colored is not None:
+        print(data)
+        cv2.imshow('Depth Map (Color)', depth_colored)
+        overlay = cv2.addWeighted(frame, 0.6, combined_mask, 0.4, 0)
+        cv2.imshow('Original with Segmentation Overlay', overlay)
+
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
-    iteration += 1
-    print(tup_arr)
+
+
 cap.release()
 cv2.destroyAllWindows()
