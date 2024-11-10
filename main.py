@@ -27,14 +27,11 @@ if __name__ == "__main__":
     # speak_mac(". Hey! How can I help you...")
     # target_obj = get_target_object(record_duration=RECORD_DURATION)
     target_obj = "bottle"
-    try:
-        os.system(f"Perfect! Let's go find your '{target_obj}'")
-    except Exception as e:
-        print("Error in speak_mac:", e)
+    speak_mac(f"Perfect! Let's go find your '{target_obj}'")
 
-    AREA_THRESHOLD = 2.75
-    DEPTH_THRESHOLD = 60
-    TIME_SPEAK_INTERVAL = 2.0
+    AREA_THRESHOLD = 2.25
+    DEPTH_THRESHOLD = 30
+    TIME_SPEAK_INTERVAL = .75
 
     DEPTH_ADJUST_COUNTER = 1
 
@@ -49,6 +46,7 @@ if __name__ == "__main__":
         exit()
 
     obstacle_obj = "chair"
+    obstacle_obj = None
 
     color_map = {
         "backpack": (255, 0, 0),
@@ -88,6 +86,7 @@ if __name__ == "__main__":
 
             image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
             depth = depth_pipe(image)["depth"]
+            print(depth)
             depth_array = np.array(depth)
 
             target_depth_values = depth_array[y:y+h, x:x+w]

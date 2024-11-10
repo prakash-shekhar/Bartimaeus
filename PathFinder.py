@@ -91,20 +91,21 @@ def next_instruction(objects, target_name):
         #ONLY return an actual target_depth when the previous move is move forward so we can check the SECOND threshold for if we have reached the object now
         if (res == "Left"):
             if (loc == "middle of screen"):
-                return (f"The {obstacle[0]} is in front of you, turn Left and move forward,", loc)
+                return (f"The {obstacle[0]} is in front of you, turn Left and move forward,", loc, True)
             elif (loc == "right of screen"):
-                return ("Please Move Forward", target_depth)
+                return ("Please Move Forward", target_depth, False)
 
 
         elif (res == "Right"):
             if (loc == "middle of screen"):
-                return (f"The {obstacle[0]} is in front of you, turn Right and move forward", loc)
+                return (f"The {obstacle[0]} is in front of you, turn Right and move forward", loc, True)
             elif (loc == "left of screen"):
-                return ("Please Move Forward", loc)
+                return ("Please Move Forward", loc, False)
 
     # no intersection with this object
     if (loc == "left of screen"):
-        return ("Turn Left", loc)
+        return ("Turn Left", loc, False)
     elif (loc == "right of screen"):
-        return ("Turn Right", loc)
-    return ("Please Move Forward", loc)
+        return ("Turn Right", loc, False)
+        
+    return ("Please Move Forward", loc, False)

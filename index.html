@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Bartimaeus: Empowering Blind Navigation">
+  <meta name="keywords" content="Blind Navigation, Spatial Navigation, YOLO, OpenCV, Audio Cues">
+  <title>Bartimaeus</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+ <style>
+    /* Custom styling for minimal colors */
+    body {
+      background-color: #f8f9fa;
+      color: #333;
+    }
+    .hero {
+      background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("data/navtop.png");
+      padding: 1rem 1rem;
+      text-align: center;
+      border-bottom: 1px solid #ddd;
+    }
+    .hero h1, .hero p.lead {
+      color: #fff; /* Change text color to white */
+    }
+    .section-title {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    .thumbnail {
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    /* Styling for tech stack images */
+    .tech-image {
+      margin: 15px;
+      padding: 15px;
+      transition: transform 0.65s ease, box-shadow 0.65s ease;
+      cursor: pointer;
+    }
+    .tech-image:hover {
+      transform: scale(1.4); /* Increase scale factor for a more noticeable effect */
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3); /* Stronger shadow for emphasis */
+      z-index: 10;
+    }
+</style>
+</head>
+<body>
+
+  <header class="hero">
+    <h1 class="display-4">Bartimaeus</h1>
+    <p class="lead">Stealing Vision Back</p>
+    <p class="lead">
+      <a href="https://www.linkedin.com/in/prakash-shekhar-422134232">Prakash Shekhar</a>,
+      <a href="https://www.linkedin.com/in/srianumakonda">Sri Anumakonda</a>,
+      <a href="https://www.linkedin.com/in/https://www.linkedin.com/in/harsh-akunuri">Harsh Akunuri</a>,
+      <a href="https://www.linkedin.com/in/ajay-raj-670850230">Ajay Raj</a>
+    </p>
+    <div class="image-row">
+          <img src="https://spin-robot.github.io/resources/cmu-wordmark-horizontal-r.png" width="20%"></img>
+    </div>
+  </header>
+
+  <main class="container my-5">
+    <section class="text-center mb-5">
+      <img src="data/visualize_gif.gif" alt="Visualize Gif" style="max-height: 600px;"> 
+      <br>
+      <br>
+      <p class="lead">
+        In the Bible, Jesus gave the blind Bartimaeus the ability to see. We want to provide blind individuals with the ability of spatial navigation through the help of an audio agent that gives verbal commands on how to move toward an arbitrarily chosen object. 
+        This interface is run using a phone camera pointed at a field of view, and we allow for auditory cues from the user to identify what object within their peripheral they would like to procure. 
+      </p>
+    </section>
+
+    <section>
+  <h2 class="section-title h3">Tech Stack</h2>
+  <br>
+  <div class="row justify-content-center">
+    <img src="data/techstack.png" alt="Tech Stack" style="max-height: 600px;"><br>
+    
+  </div>
+  <br>
+    <br>
+    <p class="lead">Through YOLO and OpenCV (Hugging Face Visual Transformer) we identify the closest object of that type, and enclose it with a bounding box. 
+      Then, we utilize two zero-shot learning models (depth anything and SAM) and a novel mathematical path-finding algorithm we developed to provide audio cues to the user moving through legal motion (paths without obstacles in the way aligned toward the target object/location).</p>
+  
+    </section>
+<br>
+<section>
+  <h2 class="section-title h3">Demo Videos</h2>
+  <p class class="lead">We've performed extensive tests on the accuracy of our model (from a computer vision and trajectory planning perspective) in order to determine its robustness. Below, we display 4 general cases of indoor-assisted navigation.</p>
+  <br>
+  <div class="row">
+    <div class="col-md-6 mb-4">
+      <div class="thumbnail">
+        <p class="section-title h4">Navigation to a water bottle in front of us.</p>
+        <iframe width="100%" height="400" src="https://www.youtube.com/embed/-SC_iIAPzRs" allowfullscreen></iframe>
+      </div>
+    </div>
+    <div class="col-md-6 mb-4">
+      <div class="thumbnail">
+        <p class="section-title h4">Finding a chair with a backpack in the middle.</p>
+        <iframe width="100%" height="400" src="https://www.youtube.com/embed/BnmX3R-8sSo" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-6 mb-4">
+      <div class="thumbnail">
+        <p class="section-title h4">Finding a chair that isn't in our current frame.</p>
+        <iframe width="100%" height="400" src="https://www.youtube.com/embed/a-LPRGOKDtU" allowfullscreen></iframe>
+      </div>
+    </div>
+    <div class="col-md-6 mb-4">
+      <div class="thumbnail">
+        <p class="section-title h4">An object is not in our environment.</p>
+        <iframe width="100%" height="400" src="https://www.youtube.com/embed/mnuehPIrcvg" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="section-title h3">Challenge Example</h2>
+  <p class="text-center py-4"> We also examine the case where there might be multiple objects that are obstacles towards the goal of reaching for a specific object while also being able to seamlessly perform multiple task finds.</p>
+  <div class="row">
+    <div class="col-md-6 offset-md-3 mb-4">
+      <div class="thumbnail">
+        <iframe width="100%" height="400" src="https://www.youtube.com/embed/sVGbveyNWao" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+    <section>
+      <h2 class="section-title h3">Acknowledgments</h2>
+      <p class="text-center">
+        Special thanks to all contributors and collaborators who helped make Bartimaeus possible.
+      </p>
+      <p class="text-center">…to HackPrinceton for allowing us to breathe life into this</p>
+      <p class="text-center">…to Jennifer for inspiring this project</p>
+      <p class="text-center">… to the Western Penn. School for the Blind for engaging in a follow-up project</p>
+    </section>
+  </main>
+
+  <footer class="text-center py-4">
+    <p class="mb-0">© 2024 Bartimaeus Project</p>
+  </footer>
+
+  <!-- Bootstrap JavaScript and dependencies -->
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

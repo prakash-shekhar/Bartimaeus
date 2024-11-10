@@ -7,9 +7,18 @@ from transformers import pipeline, CLIPSegProcessor, CLIPSegForImageSegmentation
 from ultralytics import YOLO
 import os
 import logging
+import subprocess
 
 def speak_mac(text):
-    os.system(f"say '{text}'")
+    sanitized_text = text.replace("'", "\\'")  # Escape single quotes
+    try:
+        # Use subprocess.run for better handling
+        subprocess.run(["say", sanitized_text], check=True)
+    except subprocess.CalledProcessError as e:
+        print("Error in speak_mac:", e)
+        
+# def speak_mac(text):
+#     os.system(f"say '{text}'")
 
 logging.getLogger("ultralytics").setLevel(logging.ERROR)
 

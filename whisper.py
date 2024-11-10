@@ -6,7 +6,7 @@ import warnings
 import re
 
 warnings.filterwarnings("ignore", category=FutureWarning)
-whisper = pipeline("automatic-speech-recognition", model="openai/whisper-small", torch_dtype=torch.float32, device="mps")
+whisper = pipeline("automatic-speech-recognition", model="openai/whisper-medium", torch_dtype=torch.float32, device="mps")
 sample_rate = 16000
 
 def record_audio(record_duration):
