@@ -6,10 +6,13 @@ import torch
 from transformers import CLIPSegProcessor, CLIPSegForImageSegmentation
 from utils import *
 depth_colored = None
+import PathFinder
+import time
 
 
-AREA_THRESHOLD = 2.5
-DEPTH_THRESHOLD = 30
+AREA_THRESHOLD = 2.75
+DEPTH_THRESHOLD = 60
+TIME_SPEAK_INTERVAL = 2.0
 
 DEPTH_ADJUST_COUNTER = 1
 
@@ -23,8 +26,8 @@ if not cap.isOpened():
     print("Error: Could not open video.")
     exit()
 
-target_obj = "chair"
-obstacle_obj = "backpack"
+target_obj = "bottle"
+obstacle_obj = "chair"
 
 color_map = {
     "backpack": (255, 0, 0),
@@ -35,13 +38,17 @@ color_map = {
 initial_depth = {}
 initial_area = {}
 
+i = 0
+move_arr=[]
+start = time.time()
+interval_time = 0
 while True:
     data = []
+    start_time = time.time()
     ret, frame = cap.read()
     if not ret:
         print("Error: Could not read frame.")
         break
-
     if DEPTH_ADJUST_COUNTER < 1:
         speak_mac(f"The {target_obj} has been found!")
         DEPTH_ADJUST_COUNTER = 1
@@ -64,15 +71,6 @@ while True:
         target_depth_values = depth_array[y:y+h, x:x+w]
         average_depth = np.mean(target_depth_values)
 
-        if target_obj not in initial_depth:
-            initial_depth[target_obj] = average_depth
-            initial_area[target_obj] = area
-        else:
-            if area >= AREA_THRESHOLD * initial_area[target_obj] and average_depth >= initial_depth[target_obj] + DEPTH_THRESHOLD:
-                speak_mac(f"You are now at the {target_obj}.")
-                print(f"You are now at the {target_obj}.")
-                break
-
         depth_colored = cv2.applyColorMap(cv2.normalize(depth_array, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8), cv2.COLORMAP_MAGMA)
         box_color = color_map.get(target_obj, (255, 255, 255))
         cv2.rectangle(depth_colored, (x, y), (x + w, y + h), box_color, 2)
@@ -82,7 +80,7 @@ while True:
         target_overlay[target_mask == 255] = box_color
         combined_mask = cv2.addWeighted(combined_mask, 1, target_overlay, 1, 0)
 
-        data.append((target_obj, (x,y), (x+w,y+h), average_depth))
+        data.append((target_obj, x, y, x+w, y+h, average_depth))
 
     if obstacle_obj is not None:
         obstacle_mask = get_object_mask(frame, prompt=obstacle_obj)
@@ -97,12 +95,10 @@ while True:
             obstacle_color = color_map.get(obstacle_obj, (255, 255, 255))
             cv2.rectangle(depth_colored, (x, y), (x + w, y + h), obstacle_color, 2)
             cv2.putText(depth_colored, f"{obstacle_obj}: Avg Depth {obstacle_average_depth:.2f}", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, obstacle_color, 1)
-
             obstacle_overlay = np.zeros_like(frame)
             obstacle_overlay[obstacle_mask == 255] = obstacle_color
             combined_mask = cv2.addWeighted(combined_mask, 1, obstacle_overlay, 1, 0)
-
-            data.append((obstacle_obj, (x,y), (x+w,y+h), average_depth))
+            data.append((obstacle_obj, x , y, x+w , y+h , average_depth))
 
     if depth_colored is None:
         if DEPTH_ADJUST_COUNTER==0:
@@ -110,15 +106,44 @@ while True:
             break
         DEPTH_ADJUST_COUNTER-=1
         speak_mac(f"The {target_obj} cannot be seen. Please rotate!")
+        time.sleep(1.5)
+        continue
 
     if depth_colored is not None:
-        print(data)
+        # print(data)
+        seg_frame = run_semantic_segmentation(frame, prompt="ground", overlay_original=True)
+        cv2.imshow('Original frame', frame)
+        cv2.imshow("Original with Semantic Segmentation", seg_frame)
         cv2.imshow('Depth Map (Color)', depth_colored)
         overlay = cv2.addWeighted(frame, 0.6, combined_mask, 0.4, 0)
-        cv2.imshow('Original with Segmentation Overlay', overlay)
+        cv2.imshow('Original with Ground Segmentation Overlay', overlay)
+        # top_row = np.hstack((frame, seg_frame))
+        # bottom_row = np.hstack((depth_colored, overlay))
+        # combined_display = np.vstack((top_row, bottom_row))
+        # cv2.imshow('Combined Display', combined_display)
+
+
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
+
+    move, location = PathFinder.next_instruction(data, target_obj)
+
+    if target_obj not in initial_depth:
+        initial_depth[target_obj] = average_depth
+        initial_area[target_obj] = area
+    else:
+        if area >= AREA_THRESHOLD * initial_area[target_obj] and average_depth >= initial_depth[target_obj] + DEPTH_THRESHOLD and location=="middle of screen":
+            speak_mac(f"You are now at the {target_obj}. Please use your hands to slowly get a feeling of your environment!")
+            print(f"You are now at the {target_obj}.")
+            break
+    
+    interval_time += time.time() - start_time
+    start_time = time.time()
+
+    if(interval_time > TIME_SPEAK_INTERVAL):
+        speak_mac(move)
+        interval_time = 0
 
 
 cap.release()

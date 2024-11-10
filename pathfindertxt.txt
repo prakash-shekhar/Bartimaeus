@@ -39,6 +39,8 @@ def check_intersection(target_pos, user_pos, obstacle_x1, obstacle_y1, obstacle_
     elif (R2_res):
         return "Right"
 
+
+
 def check_which_section(x_val):
     if (0 <= x_val <= (x_dim // 3)):
         return "left of screen"
@@ -71,13 +73,12 @@ def next_instruction(objects, target_name):
 
             continue
 
-    #dealt with in DMYolo New (DM SAM)
-    # if (not found_target):
-    #     return ("Object is not in view", -1, False)
+    if (not found_target):
+        return ("Object is not in view", -1, False)
 
     loc = check_which_section(target_midpoint[0])
 
-    obstacle_list = sorted(obstacle_list, key=lambda x: x[5], reverse=True)  # sorts it by closest objects based on depth
+    obstacle_list = sorted(obstacle_list, key=lambda x: x[5], reverse=True)  # sorts it by closest objects
 
     for obstacle in obstacle_list:
         obstacle_depth = obstacle[5]
@@ -91,20 +92,23 @@ def next_instruction(objects, target_name):
         #ONLY return an actual target_depth when the previous move is move forward so we can check the SECOND threshold for if we have reached the object now
         if (res == "Left"):
             if (loc == "middle of screen"):
-                return (f"The {obstacle[0]} is in front of you, turn Left and move forward,", loc)
+                return (f"Turn Left, there is a {obstacle[0]} in front of you", -1, False)
             elif (loc == "right of screen"):
-                return ("Please Move Forward", target_depth)
+                return ("Move Forward", target_depth, False)
 
 
         elif (res == "Right"):
             if (loc == "middle of screen"):
-                return (f"The {obstacle[0]} is in front of you, turn Right and move forward", loc)
+                return (f"Turn Right, there is a {obstacle[0]} in front of you", -1, False)
             elif (loc == "left of screen"):
-                return ("Please Move Forward", loc)
+                return ("Move Forward", target_depth, False)
 
-    # no intersection with this object
+        # no intersection with this object
     if (loc == "left of screen"):
-        return ("Turn Left", loc)
+        return ("Turn Left", -1, True)
     elif (loc == "right of screen"):
-        return ("Turn Right", loc)
-    return ("Please Move Forward", loc)
+        return ("Turn Right", -1, True)
+
+    return ("Move Forward", target_depth, True)
+
+# also add when you said (based on depth >= some high threshold)"you have reached {target_name}"

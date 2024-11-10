@@ -31,7 +31,7 @@ def main(save_video=False, duration=10, fps=6, camera=0):
         original_frame = frame_resized.copy()
         detection_frame = run_object_detection(frame_resized)
         depth_frame = run_depth_estimation(frame_resized, overlay_detection=True)
-        seg_frame = run_semantic_segmentation(frame_resized, overlay_original=True)
+        seg_frame = run_semantic_segmentation(frame_resized, prompt="ground", overlay_original=True)
 
         # Layout for 2x2 Grid
         top_row = np.hstack((original_frame, detection_frame))

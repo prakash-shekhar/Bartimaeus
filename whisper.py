@@ -6,12 +6,12 @@ import warnings
 import re
 
 warnings.filterwarnings("ignore", category=FutureWarning)
-whisper = pipeline("automatic-speech-recognition", model="openai/whisper-large-v3", torch_dtype=torch.float32, device="mps")
+whisper = pipeline("automatic-speech-recognition", model="openai/whisper-small", torch_dtype=torch.float32, device="mps")
 sample_rate = 16000
 
 def record_audio(record_duration):
     print("Recording... Please speak.")
-    audio = sd.rec(int(record_duration * sample_rate), samplerate=sample_rate, channels=1, dtype="float32")
+    audio = sd.rec(int(record_duration * sample_rate), samplerate=sample_rate, device =1, channels=1, dtype="float32")
     sd.wait()
     print("Recording complete.")
     return audio.flatten()
