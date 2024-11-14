@@ -1,3 +1,5 @@
+#### THE POINT OF THIS FILE IS TO TEST OUR ALGORITHM AND BE ABLE TO DETERMINE WHETHER OUR PATH PLANNING ALGORITHM WORKS
+
 from transformers import pipeline
 import cv2
 import numpy as np
@@ -28,8 +30,11 @@ if not cap.isOpened():
     exit()
 
 target_obj = "bottle"
-obstacle_obj =  ["chair", "backpack"]
+obstacle_obj =  ["chair", "backpack"] #testing with multiple objects
 # obstacle_obj_2 =  "backpack"
+# obstacle_obj = "chair"
+# obstacle_obj = None
+
 speak_mac(f"Perfect! Let's go find your '{target_obj}'")
 
 color_map = {

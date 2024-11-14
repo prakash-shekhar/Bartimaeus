@@ -17,16 +17,18 @@ import PathFinder
 import time
 
 device = "mps"
-pipe = pipeline(task="depth-estimation", model="depth-anything/Depth-Anything-V2-Small-hf", device=device)
 model = YOLO('yolov5su.pt')
+depth_pipe = pipeline(task="depth-estimation", model="depth-anything/Depth-Anything-V2-Small-hf", device=device)
+seg_processor = CLIPSegProcessor.from_pretrained("CIDAS/clipseg-rd64-refined")
+seg_model = CLIPSegForImageSegmentation.from_pretrained("CIDAS/clipseg-rd64-refined").to(device)
 depth_colored = None
+obstacle_obj = None
 
 RECORD_DURATION = 5
 
 if __name__ == "__main__":
-    # speak_mac(". Hey! How can I help you...")
-    # target_obj = get_target_object(record_duration=RECORD_DURATION)
-    target_obj = "bottle"
+    speak_mac(". Hey! How can I help you...")
+    target_obj = get_target_object(record_duration=RECORD_DURATION)
     speak_mac(f"Perfect! Let's go find your '{target_obj}'")
 
     AREA_THRESHOLD = 2.25
@@ -35,19 +37,12 @@ if __name__ == "__main__":
 
     DEPTH_ADJUST_COUNTER = 1
 
-    device = "mps"
-    depth_pipe = pipeline(task="depth-estimation", model="depth-anything/Depth-Anything-V2-Small-hf", device=device)
-    seg_processor = CLIPSegProcessor.from_pretrained("CIDAS/clipseg-rd64-refined")
-    seg_model = CLIPSegForImageSegmentation.from_pretrained("CIDAS/clipseg-rd64-refined").to(device)
-
     cap = cv2.VideoCapture(1)
     if not cap.isOpened():
         print("Error: Could not open video.")
         exit()
 
-    obstacle_obj = "chair"
-    obstacle_obj = None
-
+    # EXAMPLES OF HYPOTHETICAL OBJECTS THAT WE CREATED SEMSEG OVERLAY FOR
     color_map = {
         "backpack": (255, 0, 0),
         "chair": (0, 255, 0),
